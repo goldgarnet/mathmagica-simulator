@@ -1,19 +1,22 @@
 import { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { useCampaignStore } from '../../store/campaignStore';
-import { getCardById, getEquipmentById } from '../../data/cards';
+import { getCardById } from '../../data/cards';
 import { getMonsterById } from '../../data/monsters';
 import { evaluateMagicLine } from '../../engine/formula';
-import { CardDisplay } from '../common/CardDisplay';
-import type { MonsterInstance } from '../../types';
+import { CardDisplay, CardTooltip } from '../common/CardDisplay';
+import type { MonsterInstance, EquipmentDef, Card } from '../../types';
 
 export default function BattleSimulator() {
   const game = useGameStore();
   const campaign = useCampaignStore();
   const [selectedHandCard, setSelectedHandCard] = useState<string | null>(null);
-  const [targetMode, setTargetMode] = useState<'none' | 'castTarget' | 'defendTarget'>('none');
-  const [pendingCast, setPendingCast] = useState<{ value: number; power: number; lineIndex: number } | null>(null);
+  const [targetMode, setTargetMode] = useState<'none' | 'castTarget'>('none');
+  const [pendingCast, setPendingCast] = useState<{ value: number; power: number; lineIndex: number; isEquals: boolean } | null>(null);
   const [orderDraft, setOrderDraft] = useState<number[]>([]);
+  const [hoveredCard, setHoveredCard] = useState<Card | null>(null);
+  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
+  const [showForfeitConfirm, setShowForfeitConfirm] = useState(false);
   const logRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -40,7 +43,6 @@ export default function BattleSimulator() {
     const currentPlayer = game.getCurrentPlayer();
     if (!currentPlayer) return;
 
-    const pIdx = game.playerOrder[game.currentPlayerIndex];
     const line = currentPlayer.magicLines[lineIndex];
     if (line.cards.length === 0) return;
 
@@ -49,33 +51,12 @@ export default function BattleSimulator() {
     if (!result) return;
 
     const totalPower = result.power + line.imprintPower;
-    setPendingCast({ value: result.value, power: totalPower, lineIndex });
+    setPendingCast({ value: result.value, power: totalPower, lineIndex, isEquals: false });
     setTargetMode('castTarget');
   }
 
   function handleEqualsCast(lineIndex: number) {
     if (!selectedHandCard) return;
-    game.equalsCast(selectedHandCard, lineIndex);
-    setSelectedHandCard(null);
-
-    // After equals cast, handle targeting
-    const currentPlayer = game.getCurrentPlayer();
-    if (currentPlayer) {
-      // Turn ends after equals cast
-      setTimeout(() => game.endPlayerTurn(), 100);
-    }
-  }
-
-  function handleTargetMonster(monsterInstanceId: string) {
-    if (targetMode === 'castTarget' && pendingCast) {
-      game.castMagicLine(pendingCast.lineIndex);
-      game.activateMagic(pendingCast.value, pendingCast.power, 'monster', monsterInstanceId);
-      setPendingCast(null);
-      setTargetMode('none');
-    }
-  }
-
-  function handleDefendAttack(monsterInstanceId: string, lineIndex: number) {
     const currentPlayer = game.getCurrentPlayer();
     if (!currentPlayer) return;
 
@@ -87,10 +68,32 @@ export default function BattleSimulator() {
     if (!result) return;
 
     const totalPower = result.power + line.imprintPower;
-    game.castMagicLine(lineIndex);
-    const success = game.activateMagic(result.value, totalPower, 'monster', monsterInstanceId);
-    if (!success) {
-      // Try to defend instead
+
+    // Place the flipped card immediately so user sees it on the line
+    game.placeEqualsCard(selectedHandCard, lineIndex);
+
+    setPendingCast({ value: result.value, power: totalPower, lineIndex, isEquals: true });
+    setTargetMode('castTarget');
+  }
+
+  function handleTargetMonster(monsterInstanceId: string) {
+    if (targetMode === 'castTarget' && pendingCast) {
+      const wasEquals = pendingCast.isEquals;
+
+      if (wasEquals) {
+        game.addLog(`등호 시전 발동!`, 'action');
+      }
+
+      game.castMagicLine(pendingCast.lineIndex);
+      game.activateMagic(pendingCast.value, pendingCast.power, 'monster', monsterInstanceId);
+
+      setSelectedHandCard(null);
+      setPendingCast(null);
+      setTargetMode('none');
+
+      if (wasEquals) {
+        setTimeout(() => game.endPlayerTurn(), 200);
+      }
     }
   }
 
@@ -107,20 +110,29 @@ export default function BattleSimulator() {
   }
 
   function cancelTarget() {
+    if (pendingCast?.isEquals) {
+      game.removeEqualsCard(pendingCast.lineIndex);
+    }
     setTargetMode('none');
     setPendingCast(null);
   }
 
+  function handleCardHover(card: Card, e: React.MouseEvent) {
+    setHoveredCard(card);
+    setTooltipPos({ x: e.clientX + 12, y: e.clientY + 12 });
+  }
+
+  function handleForfeit() {
+    setShowForfeitConfirm(false);
+    game.forfeitGame();
+  }
+
   const currentPlayer = game.getCurrentPlayer();
-  const activeMonsters = game.monsterSlots
-    .filter(s => s.activeMonster && !s.activeMonster.isDead)
-    .map(s => s.activeMonster!);
 
   return (
     <div className="h-[calc(100vh-52px)] flex">
       {/* Main battle area */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Setup / phase overlay */}
         {game.phase === 'setup' && (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
@@ -141,22 +153,37 @@ export default function BattleSimulator() {
             {/* Monster area */}
             <div className="bg-bg-secondary border-b border-border p-4 flex-shrink-0">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-medium text-accent-red">
+                <span className="text-sm font-medium text-accent-red flex items-center gap-2">
                   몬스터 영역 — 라운드 {game.round}
+                  {game.tutorialMode && (
+                    <span className="px-1.5 py-0.5 text-[9px] bg-accent-gold/20 text-accent-gold rounded">
+                      TUTORIAL
+                    </span>
+                  )}
                 </span>
-                {(game.phase === 'roundEnd' || game.phase === 'monsterAttack') && (
-                  <button
-                    onClick={handleStartRound}
-                    className="px-3 py-1 text-sm bg-accent-gold text-bg-primary rounded font-medium hover:bg-accent-gold/80"
-                  >
-                    다음 라운드
-                  </button>
-                )}
-                {game.round === 0 && game.players.length > 0 && (
-                  <button onClick={handleStartRound} className="px-3 py-1 text-sm bg-accent-green text-bg-primary rounded font-medium">
-                    라운드 시작
-                  </button>
-                )}
+                <div className="flex items-center gap-2">
+                  {(game.phase === 'roundEnd' || game.phase === 'monsterAttack') && (
+                    <button
+                      onClick={handleStartRound}
+                      className="px-3 py-1 text-sm bg-accent-gold text-bg-primary rounded font-medium hover:bg-accent-gold/80"
+                    >
+                      다음 라운드
+                    </button>
+                  )}
+                  {game.round === 0 && game.players.length > 0 && (
+                    <button onClick={handleStartRound} className="px-3 py-1 text-sm bg-accent-green text-bg-primary rounded font-medium">
+                      라운드 시작
+                    </button>
+                  )}
+                  {(game.phase === 'playerTurn' || game.phase === 'roundEnd' || game.phase === 'orderSelection' || game.phase === 'monsterAttack') && (
+                    <button
+                      onClick={() => setShowForfeitConfirm(true)}
+                      className="px-3 py-1 text-sm bg-accent-red/20 text-accent-red border border-accent-red/40 rounded hover:bg-accent-red/30"
+                    >
+                      포기
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="flex gap-4 overflow-x-auto">
                 {game.monsterSlots.map((slot, si) => (
@@ -220,11 +247,10 @@ export default function BattleSimulator() {
             {/* Magic lines & hand - player turn */}
             {(game.phase === 'playerTurn' || game.phase === 'roundEnd' || game.phase === 'monsterAttack') && currentPlayer && (
               <div className="flex-1 flex flex-col overflow-hidden">
-                {/* Target mode overlay */}
                 {targetMode === 'castTarget' && (
                   <div className="bg-accent-gold/10 border-b border-accent-gold/30 px-4 py-2 flex items-center justify-between flex-shrink-0">
                     <span className="text-sm text-accent-gold font-medium">
-                      대상을 선택하세요: {pendingCast?.value}({'★'.repeat(pendingCast?.power ?? 0)})
+                      {pendingCast?.isEquals ? '등호 시전 - ' : ''}대상을 선택하세요: {pendingCast?.value}({'★'.repeat(pendingCast?.power ?? 0)})
                     </span>
                     <button onClick={cancelTarget} className="text-sm text-accent-red hover:underline">
                       취소
@@ -261,6 +287,7 @@ export default function BattleSimulator() {
                     const cards = line.cards.map(ci => getCardById(ci.cardId)!).filter(Boolean);
                     const result = cards.length > 0 ? evaluateMagicLine(cards) : null;
                     const totalPower = result ? result.power + line.imprintPower : 0;
+                    const equalsCardData = line.equalsCard ? getCardById(line.equalsCard.cardId) : null;
 
                     return (
                       <div key={li} className="flex items-center gap-2">
@@ -287,18 +314,34 @@ export default function BattleSimulator() {
                           }}
                         >
                           {cards.map((card, ci) => (
-                            <CardDisplay
+                            <div
                               key={ci}
-                              card={card}
-                              size="sm"
-                              onClick={() => {
-                                if (game.phase === 'playerTurn') {
-                                  game.removeCardFromMagicLine(li, ci);
-                                }
-                              }}
-                            />
+                              onMouseEnter={e => handleCardHover(card, e)}
+                              onMouseLeave={() => setHoveredCard(null)}
+                              onMouseMove={e => handleCardHover(card, e)}
+                            >
+                              <CardDisplay
+                                card={card}
+                                size="sm"
+                                onClick={() => {
+                                  if (game.phase === 'playerTurn') {
+                                    game.removeCardFromMagicLine(li, ci);
+                                  }
+                                }}
+                              />
+                            </div>
                           ))}
-                          {cards.length === 0 && (
+                          {/* Flipped equals card */}
+                          {equalsCardData && (
+                            <div
+                              className="w-14 h-20 bg-gradient-to-br from-accent-gold/30 to-accent-purple/30 border-2 border-accent-gold rounded-lg flex flex-col items-center justify-center text-accent-gold shadow-lg shadow-accent-gold/20"
+                              title={`등호 (뒤집힌 카드: ${equalsCardData.name})`}
+                            >
+                              <span className="text-3xl font-bold leading-none">=</span>
+                              <span className="text-[8px] mt-1 opacity-70">FLIPPED</span>
+                            </div>
+                          )}
+                          {cards.length === 0 && !equalsCardData && (
                             <span className="text-text-muted text-xs">카드를 여기에 놓으세요</span>
                           )}
                         </div>
@@ -316,13 +359,13 @@ export default function BattleSimulator() {
                             >
                               시전
                             </button>
-                            {selectedHandCard && (
+                            {selectedHandCard && !line.equalsCard && (
                               <button
                                 onClick={() => handleEqualsCast(li)}
                                 className="px-2 py-1 text-xs bg-accent-gold/20 text-accent-gold rounded hover:bg-accent-gold/30"
                                 title="등호 시전 (턴 종료)"
                               >
-                                =
+                                = 등호
                               </button>
                             )}
                           </div>
@@ -358,20 +401,26 @@ export default function BattleSimulator() {
                       const card = getCardById(ci.cardId);
                       if (!card) return null;
                       return (
-                        <CardDisplay
+                        <div
                           key={ci.instanceId}
-                          card={card}
-                          size="md"
-                          selected={selectedHandCard === ci.instanceId}
-                          onClick={() => setSelectedHandCard(
-                            selectedHandCard === ci.instanceId ? null : ci.instanceId
-                          )}
-                          draggable
-                          onDragStart={e => {
-                            e.dataTransfer.setData('cardInstanceId', ci.instanceId);
-                            setSelectedHandCard(ci.instanceId);
-                          }}
-                        />
+                          onMouseEnter={e => handleCardHover(card, e)}
+                          onMouseLeave={() => setHoveredCard(null)}
+                          onMouseMove={e => handleCardHover(card, e)}
+                        >
+                          <CardDisplay
+                            card={card}
+                            size="md"
+                            selected={selectedHandCard === ci.instanceId}
+                            onClick={() => setSelectedHandCard(
+                              selectedHandCard === ci.instanceId ? null : ci.instanceId
+                            )}
+                            draggable
+                            onDragStart={e => {
+                              e.dataTransfer.setData('cardInstanceId', ci.instanceId);
+                              setSelectedHandCard(ci.instanceId);
+                            }}
+                          />
+                        </div>
                       );
                     })}
                   </div>
@@ -379,7 +428,6 @@ export default function BattleSimulator() {
               </div>
             )}
 
-            {/* Victory / Defeat */}
             {(game.phase === 'victory' || game.phase === 'defeat') && (
               <div className="flex-1 flex items-center justify-center">
                 <div className="text-center">
@@ -391,10 +439,10 @@ export default function BattleSimulator() {
                   <p className="text-text-secondary mb-6">
                     {game.phase === 'victory'
                       ? '모든 몬스터를 처치했습니다!'
-                      : '모든 플레이어가 쓰러졌습니다.'}
+                      : '전투가 종료되었습니다.'}
                   </p>
                   <button
-                    onClick={handleInit}
+                    onClick={() => game.restartGame()}
                     className="px-6 py-2 bg-accent-purple text-white rounded-lg hover:bg-accent-purple/80"
                   >
                     다시 시작
@@ -406,40 +454,12 @@ export default function BattleSimulator() {
         )}
       </div>
 
-      {/* Right sidebar - game log + equipment */}
-      <div className="w-72 bg-bg-secondary border-l border-border flex flex-col flex-shrink-0">
-        {/* Equipment panel */}
+      {/* Right sidebar - equipment + log */}
+      <div className="w-80 bg-bg-secondary border-l border-border flex flex-col flex-shrink-0">
         {currentPlayer && (
-          <div className="p-3 border-b border-border flex-shrink-0">
-            <div className="text-xs text-text-muted mb-2">장비</div>
-            <div className="space-y-1">
-              {(['hat', 'robe', 'leftHand', 'rightHand'] as const).map(slot => {
-                const equipId = (currentPlayer.equipment as any)[slot];
-                if (!equipId) return null;
-                const equip = typeof equipId === 'string' ? getEquipmentById(equipId) : equipId;
-                if (!equip) return null;
-                return (
-                  <div key={slot} className="text-[10px] text-text-secondary bg-bg-card rounded px-2 py-1">
-                    <span className="text-text-primary">{equip.name}</span>
-                    <div className="text-text-muted truncate">{equip.effectDescription}</div>
-                  </div>
-                );
-              })}
-              {currentPlayer.equipment.accessories.map((acc, i) => {
-                const equip = typeof acc === 'string' ? getEquipmentById(acc) : acc;
-                if (!equip) return null;
-                return (
-                  <div key={i} className="text-[10px] text-text-secondary bg-bg-card rounded px-2 py-1">
-                    <span className="text-text-primary">{equip.name}</span>
-                    <div className="text-text-muted truncate">{equip.effectDescription}</div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          <EquipmentPanel player={currentPlayer} />
         )}
 
-        {/* All players status */}
         {game.players.length > 1 && (
           <div className="p-3 border-b border-border flex-shrink-0">
             <div className="text-xs text-text-muted mb-2">플레이어 상태</div>
@@ -458,7 +478,6 @@ export default function BattleSimulator() {
           </div>
         )}
 
-        {/* Game log */}
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="px-3 py-2 border-b border-border flex-shrink-0">
             <span className="text-xs text-text-muted">게임 로그</span>
@@ -479,6 +498,112 @@ export default function BattleSimulator() {
             ))}
           </div>
         </div>
+      </div>
+
+      {/* Hover tooltip */}
+      {hoveredCard && (
+        <div className="fixed pointer-events-none z-50" style={{ left: tooltipPos.x, top: tooltipPos.y }}>
+          <CardTooltip card={hoveredCard} />
+        </div>
+      )}
+
+      {/* Forfeit confirmation modal */}
+      {showForfeitConfirm && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+          <div className="bg-bg-secondary border border-border rounded-xl p-6 max-w-sm">
+            <h3 className="text-lg font-bold text-accent-red mb-2">전투 포기</h3>
+            <p className="text-sm text-text-secondary mb-4">
+              정말로 이 전투를 포기하시겠습니까? 진행 중인 게임이 종료됩니다.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setShowForfeitConfirm(false)}
+                className="px-4 py-2 text-sm bg-bg-card text-text-secondary rounded hover:bg-bg-hover"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleForfeit}
+                className="px-4 py-2 text-sm bg-accent-red text-white rounded hover:bg-accent-red/80"
+              >
+                포기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EquipmentPanel({ player }: { player: import('../../types').PlayerState }) {
+  const game = useGameStore();
+  const allEquips: { equip: EquipmentDef; slotLabel: string }[] = [];
+  if (player.equipment.hat) allEquips.push({ equip: player.equipment.hat, slotLabel: '모자' });
+  if (player.equipment.robe) allEquips.push({ equip: player.equipment.robe, slotLabel: '로브' });
+  if (player.equipment.leftHand) allEquips.push({ equip: player.equipment.leftHand, slotLabel: '왼손' });
+  if (player.equipment.rightHand) allEquips.push({ equip: player.equipment.rightHand, slotLabel: '오른손' });
+  player.equipment.accessories.forEach(a => allEquips.push({ equip: a, slotLabel: '장신구' }));
+
+  return (
+    <div className="p-3 border-b border-border flex-shrink-0 max-h-[40vh] overflow-y-auto">
+      <div className="text-xs text-text-muted mb-2">장비</div>
+      {game.pendingDamageReduction > 0 && (
+        <div className="text-[10px] text-accent-blue mb-2 px-2 py-1 bg-accent-blue/10 rounded">
+          🛡️ 피해 감소 충전 ×{game.pendingDamageReduction}
+        </div>
+      )}
+      <div className="space-y-2">
+        {allEquips.map(({ equip, slotLabel }, i) => {
+          const isUsed = player.equipmentUsedThisScenario.includes(equip.id);
+          const canUse = equip.activeUse && !isUsed && (
+            equip.activeUse.cost.type !== 'mana' || player.mana >= equip.activeUse.cost.amount
+          );
+          const isOncePerScenario = equip.activeUse?.cost.type === 'oncePerScenario' ||
+                                    equip.activeUse?.cost.type === 'oncePerScenarioPermanent';
+
+          return (
+            <div
+              key={i}
+              className={`text-[11px] bg-bg-card rounded p-2 ${
+                isUsed ? 'opacity-50' : ''
+              }`}
+              title={equip.effectDescription}
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-text-primary font-medium">
+                  <span className="text-text-muted text-[9px] mr-1">[{slotLabel}]</span>
+                  {equip.name}
+                </span>
+              </div>
+              <div className="text-[10px] text-text-muted mb-1 line-clamp-2">
+                {equip.effectDescription}
+              </div>
+              {equip.activeUse && (
+                <button
+                  onClick={() => game.useEquipment(equip.id)}
+                  disabled={!canUse || game.phase !== 'playerTurn'}
+                  className={`w-full mt-1 px-2 py-1 text-[10px] rounded transition-colors ${
+                    canUse && game.phase === 'playerTurn'
+                      ? 'bg-accent-purple/20 text-accent-purple hover:bg-accent-purple/30'
+                      : 'bg-bg-hover text-text-muted cursor-not-allowed'
+                  }`}
+                >
+                  {isUsed ? '✓ 사용 완료' : (
+                    <>
+                      {equip.activeUse.label}
+                      {equip.activeUse.cost.type === 'mana' && ` [${equip.activeUse.cost.amount}M]`}
+                      {isOncePerScenario && ' [1회]'}
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+          );
+        })}
+        {allEquips.length === 0 && (
+          <div className="text-[10px] text-text-muted">장착된 장비가 없습니다.</div>
+        )}
       </div>
     </div>
   );

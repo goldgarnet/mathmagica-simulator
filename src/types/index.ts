@@ -46,6 +46,11 @@ export interface ArtifactCard {
 
 export type Card = ElementCard | RuneCard | ArtifactCard;
 
+export type EquipmentUseCost =
+  | { type: 'mana'; amount: number }
+  | { type: 'oncePerScenario' }
+  | { type: 'oncePerScenarioPermanent' };
+
 export interface EquipmentDef {
   id: string;
   name: string;
@@ -53,6 +58,10 @@ export interface EquipmentDef {
   rarity: Rarity;
   effectDescription: string;
   effectId: string;
+  activeUse?: {
+    cost: EquipmentUseCost;
+    label: string;
+  };
 }
 
 export interface MonsterPatternEntry {
@@ -87,6 +96,7 @@ export interface CardInstance {
 export interface MagicLine {
   cards: CardInstance[];
   imprintPower: number;
+  equalsCard?: CardInstance | null;
 }
 
 export interface PlayerState {
@@ -164,6 +174,7 @@ export interface CampaignConfig {
     };
   }[];
   monsterSlots: { queue: string[] }[];
+  isTutorial?: boolean;
 }
 
 export interface CastResult {

@@ -196,5 +196,11 @@ export const useCampaignStore = create<CampaignStore>((set) => ({
       return { config: { ...state.config, players } };
     }),
 
-  loadTutorial: () => set({ config: JSON.parse(JSON.stringify(tutorialCampaign)) }),
+  loadTutorial: () =>
+    set({
+      config: {
+        ...JSON.parse(JSON.stringify(tutorialCampaign)),
+        isTutorial: true,
+      },
+    }),
 }));
