@@ -1,11 +1,21 @@
 import { useState } from 'react';
 import CampaignEditor from './components/editor/CampaignEditor';
 import BattleSimulator from './components/battle/BattleSimulator';
+import { useGameStore } from './store/gameStore';
+import { useCampaignStore } from './store/campaignStore';
 
 type Tab = 'editor' | 'battle';
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('editor');
+  const game = useGameStore();
+  const campaign = useCampaignStore();
+
+  function handleStartBattle() {
+    game.initGame(campaign.config);
+    game.startRound();
+    setActiveTab('battle');
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-bg-primary">
@@ -37,7 +47,7 @@ function App() {
         </nav>
       </header>
       <main className="flex-1 overflow-hidden">
-        {activeTab === 'editor' && <CampaignEditor onStartBattle={() => setActiveTab('battle')} />}
+        {activeTab === 'editor' && <CampaignEditor onStartBattle={handleStartBattle} />}
         {activeTab === 'battle' && <BattleSimulator />}
       </main>
     </div>

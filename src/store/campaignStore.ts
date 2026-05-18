@@ -16,6 +16,11 @@ interface CampaignStore {
   removeMonsterSlot: (slotIndex: number) => void;
   addMonsterToSlot: (slotIndex: number, monsterId: string) => void;
   removeMonsterFromSlot: (slotIndex: number, queueIndex: number) => void;
+  reorderMonsterInSlot: (slotIndex: number, fromIndex: number, toIndex: number) => void;
+  moveMonsterBetweenSlots: (fromSlotIndex: number, fromQueueIndex: number, toSlotIndex: number, toQueueIndex: number) => void;
+  reorderMonsterSlots: (fromIndex: number, toIndex: number) => void;
+  reorderDeckCard: (playerIndex: number, fromIndex: number, toIndex: number) => void;
+  reorderAccessory: (playerIndex: number, fromIndex: number, toIndex: number) => void;
   loadTutorial: () => void;
 }
 
@@ -135,6 +140,60 @@ export const useCampaignStore = create<CampaignStore>((set) => ({
         queue: slots[slotIndex].queue.filter((_, i) => i !== queueIndex),
       };
       return { config: { ...state.config, monsterSlots: slots } };
+    }),
+
+  reorderMonsterInSlot: (slotIndex, fromIndex, toIndex) =>
+    set((state) => {
+      const slots = [...state.config.monsterSlots];
+      const queue = [...slots[slotIndex].queue];
+      const [moved] = queue.splice(fromIndex, 1);
+      queue.splice(toIndex, 0, moved);
+      slots[slotIndex] = { queue };
+      return { config: { ...state.config, monsterSlots: slots } };
+    }),
+
+  moveMonsterBetweenSlots: (fromSlotIndex, fromQueueIndex, toSlotIndex, toQueueIndex) =>
+    set((state) => {
+      const slots = [...state.config.monsterSlots];
+      const fromQueue = [...slots[fromSlotIndex].queue];
+      const [moved] = fromQueue.splice(fromQueueIndex, 1);
+      slots[fromSlotIndex] = { queue: fromQueue };
+      const toQueue = fromSlotIndex === toSlotIndex ? fromQueue : [...slots[toSlotIndex].queue];
+      toQueue.splice(toQueueIndex, 0, moved);
+      slots[toSlotIndex] = { queue: toQueue };
+      return { config: { ...state.config, monsterSlots: slots } };
+    }),
+
+  reorderMonsterSlots: (fromIndex, toIndex) =>
+    set((state) => {
+      const slots = [...state.config.monsterSlots];
+      const [moved] = slots.splice(fromIndex, 1);
+      slots.splice(toIndex, 0, moved);
+      return { config: { ...state.config, monsterSlots: slots } };
+    }),
+
+  reorderDeckCard: (playerIndex, fromIndex, toIndex) =>
+    set((state) => {
+      const players = [...state.config.players];
+      const p = { ...players[playerIndex] };
+      const deck = [...p.deckCardIds];
+      const [moved] = deck.splice(fromIndex, 1);
+      deck.splice(toIndex, 0, moved);
+      p.deckCardIds = deck;
+      players[playerIndex] = p;
+      return { config: { ...state.config, players } };
+    }),
+
+  reorderAccessory: (playerIndex, fromIndex, toIndex) =>
+    set((state) => {
+      const players = [...state.config.players];
+      const p = { ...players[playerIndex], equipment: { ...players[playerIndex].equipment } };
+      const accs = [...p.equipment.accessories];
+      const [moved] = accs.splice(fromIndex, 1);
+      accs.splice(toIndex, 0, moved);
+      p.equipment.accessories = accs;
+      players[playerIndex] = p;
+      return { config: { ...state.config, players } };
     }),
 
   loadTutorial: () => set({ config: JSON.parse(JSON.stringify(tutorialCampaign)) }),

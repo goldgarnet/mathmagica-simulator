@@ -296,8 +296,29 @@ function DeckEditor({
               {deckCards.map((card, i) => (
                 <div
                   key={i}
-                  className="flex items-center gap-2 px-2 py-1.5 rounded bg-bg-card hover:bg-bg-hover transition-colors group"
+                  draggable
+                  onDragStart={e => {
+                    e.dataTransfer.setData('deckCardIndex', String(i));
+                    e.dataTransfer.effectAllowed = 'move';
+                  }}
+                  onDragOver={e => {
+                    e.preventDefault();
+                    e.currentTarget.classList.add('ring-2', 'ring-accent-purple');
+                  }}
+                  onDragLeave={e => {
+                    e.currentTarget.classList.remove('ring-2', 'ring-accent-purple');
+                  }}
+                  onDrop={e => {
+                    e.preventDefault();
+                    e.currentTarget.classList.remove('ring-2', 'ring-accent-purple');
+                    const from = parseInt(e.dataTransfer.getData('deckCardIndex'));
+                    if (!Number.isNaN(from) && from !== i) {
+                      store.reorderDeckCard(playerIndex, from, i);
+                    }
+                  }}
+                  className="flex items-center gap-2 px-2 py-1.5 rounded bg-bg-card hover:bg-bg-hover transition-colors group cursor-move"
                 >
+                  <span className="text-text-muted text-xs select-none">⋮⋮</span>
                   <CardDisplay card={card} size="sm" />
                   <div className="flex-1 min-w-0">
                     <div className="text-xs text-text-primary truncate">{card.name}</div>
@@ -493,9 +514,38 @@ function MonsterQueueEditor({ allMonsters }: { allMonsters: ReturnType<typeof ge
         </div>
         <div className="flex-1 overflow-auto p-3 space-y-4">
           {store.config.monsterSlots.map((slot, si) => (
-            <div key={si} className="bg-bg-card border border-border rounded-lg p-3">
+            <div
+              key={si}
+              draggable
+              onDragStart={e => {
+                if ((e.target as HTMLElement).closest('[data-monster-item]')) return;
+                e.dataTransfer.setData('slotIndex', String(si));
+                e.dataTransfer.effectAllowed = 'move';
+              }}
+              onDragOver={e => {
+                e.preventDefault();
+                if (e.dataTransfer.types.includes('slotindex')) {
+                  e.currentTarget.classList.add('ring-2', 'ring-accent-purple');
+                }
+              }}
+              onDragLeave={e => {
+                e.currentTarget.classList.remove('ring-2', 'ring-accent-purple');
+              }}
+              onDrop={e => {
+                e.preventDefault();
+                e.currentTarget.classList.remove('ring-2', 'ring-accent-purple');
+                const fromSlot = e.dataTransfer.getData('slotIndex');
+                if (fromSlot !== '') {
+                  const from = parseInt(fromSlot);
+                  if (!Number.isNaN(from) && from !== si) {
+                    store.reorderMonsterSlots(from, si);
+                  }
+                }
+              }}
+              className="bg-bg-card border border-border rounded-lg p-3 cursor-move"
+            >
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-accent-blue">슬롯 {si + 1}</span>
+                <span className="text-sm font-medium text-accent-blue">⋮⋮ 슬롯 {si + 1}</span>
                 {store.config.monsterSlots.length > 1 && (
                   <button
                     onClick={() => store.removeMonsterSlot(si)}
@@ -506,13 +556,67 @@ function MonsterQueueEditor({ allMonsters }: { allMonsters: ReturnType<typeof ge
                 )}
               </div>
               {slot.queue.length === 0 ? (
-                <div className="text-xs text-text-muted py-2">비어 있음</div>
+                <div
+                  className="text-xs text-text-muted py-2 border border-dashed border-border rounded text-center"
+                  onDragOver={e => {
+                    e.preventDefault();
+                    if (e.dataTransfer.types.includes('monsterref')) {
+                      e.currentTarget.classList.add('border-accent-purple');
+                    }
+                  }}
+                  onDragLeave={e => e.currentTarget.classList.remove('border-accent-purple')}
+                  onDrop={e => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.currentTarget.classList.remove('border-accent-purple');
+                    const ref = e.dataTransfer.getData('monsterRef');
+                    if (ref) {
+                      const [fSlot, fIdx] = ref.split(':').map(Number);
+                      if (!Number.isNaN(fSlot) && !Number.isNaN(fIdx)) {
+                        store.moveMonsterBetweenSlots(fSlot, fIdx, si, 0);
+                      }
+                    }
+                  }}
+                >
+                  비어 있음 (드롭하여 추가)
+                </div>
               ) : (
                 <div className="space-y-1">
                   {slot.queue.map((mId, qi) => {
                     const m = getMonsterById(mId);
                     return (
-                      <div key={qi} className="flex items-center gap-2 text-xs group">
+                      <div
+                        key={qi}
+                        data-monster-item
+                        draggable
+                        onDragStart={e => {
+                          e.stopPropagation();
+                          e.dataTransfer.setData('monsterRef', `${si}:${qi}`);
+                          e.dataTransfer.effectAllowed = 'move';
+                        }}
+                        onDragOver={e => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (e.dataTransfer.types.includes('monsterref')) {
+                            e.currentTarget.classList.add('bg-accent-purple/20');
+                          }
+                        }}
+                        onDragLeave={e => e.currentTarget.classList.remove('bg-accent-purple/20')}
+                        onDrop={e => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          e.currentTarget.classList.remove('bg-accent-purple/20');
+                          const ref = e.dataTransfer.getData('monsterRef');
+                          if (ref) {
+                            const [fSlot, fIdx] = ref.split(':').map(Number);
+                            if (!Number.isNaN(fSlot) && !Number.isNaN(fIdx) && (fSlot !== si || fIdx !== qi)) {
+                              store.moveMonsterBetweenSlots(fSlot, fIdx, si, qi);
+                            }
+                          }
+                        }}
+                        className="flex items-center gap-2 text-xs group cursor-move px-1 py-0.5 rounded"
+                      >
+                        <span className="text-text-muted w-4 select-none">⋮⋮</span>
                         <span className="text-text-muted w-4">{qi + 1}.</span>
                         <span className="flex-1 text-text-primary">{m?.name ?? mId}</span>
                         <span className="text-text-muted">

@@ -1,4 +1,4 @@
-import type { ElementCard, RuneCard, ArtifactCard, EquipmentDef } from '../types';
+import type { ElementCard, RuneCard, ArtifactCard, EquipmentDef, RuneSymbol } from '../types';
 
 export const elementCards: ElementCard[] = [
   { cardType: 'element', id: 'elem-life-2-1', name: '생명', elementName: 'life', value: 2, power: 1 },

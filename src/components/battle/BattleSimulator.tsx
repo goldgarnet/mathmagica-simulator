@@ -152,7 +152,7 @@ export default function BattleSimulator() {
                     다음 라운드
                   </button>
                 )}
-                {game.phase === 'setup' && game.round === 0 && game.players.length > 0 && (
+                {game.round === 0 && game.players.length > 0 && (
                   <button onClick={handleStartRound} className="px-3 py-1 text-sm bg-accent-green text-bg-primary rounded font-medium">
                     라운드 시작
                   </button>
