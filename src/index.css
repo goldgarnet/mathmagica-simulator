@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg-primary: #0f0e17;
+  --color-bg-secondary: #1a1929;
+  --color-bg-tertiary: #232136;
+  --color-bg-card: #2a2844;
+  --color-bg-hover: #352f5a;
+  --color-border: #3d3766;
+  --color-border-light: #4a4280;
+  --color-text-primary: #e8e4f0;
+  --color-text-secondary: #a89ec8;
+  --color-text-muted: #7b6f9e;
+  --color-accent-purple: #9b5de5;
+  --color-accent-blue: #4ea8de;
+  --color-accent-gold: #f5a623;
+  --color-accent-red: #e74c5e;
+  --color-accent-green: #4ecdc4;
+  --color-element-life: #4ecdc4;
+  --color-element-fire: #e74c5e;
+  --color-element-air: #a89ec8;
+  --color-element-water: #4ea8de;
+  --color-element-earth: #c4a35a;
+  --color-element-lightning: #f5a623;
+  --color-element-void: #7b6f9e;
+  --color-element-light: #f0e6ff;
+  --color-rarity-common: #a89ec8;
+  --color-rarity-rare: #4ea8de;
+  --color-rarity-epic: #9b5de5;
+  --color-rarity-legendary: #f5a623;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-bg-secondary);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border-light);
+}
