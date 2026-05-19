@@ -381,32 +381,57 @@ function PlayerBar({
   onShowDiscard: () => void;
 }) {
   const game = useGameStore();
+  const hpPct = Math.max(0, Math.min(1, player.hp / Math.max(1, player.maxHp))) * 100;
 
   return (
-    <div className="bg-bg-tertiary border-b border-border px-3 py-2 flex-shrink-0 space-y-2">
-      <div className="flex items-center gap-3 flex-wrap">
-        <span className="font-medium text-text-primary">{player.name}</span>
+    <div className="bg-bg-tertiary border-b border-border px-4 py-3 flex-shrink-0 space-y-2">
+      <div className="flex items-center gap-4 flex-wrap">
+        <span className="font-bold text-base text-text-primary">{player.name}</span>
 
-        <Counter
-          label="HP"
-          color="text-accent-red"
-          value={player.hp}
-          max={player.maxHp}
-          onMinus={() => game.adjustHp(playerIndex, -1)}
-          onPlus={() => game.adjustHp(playerIndex, +1)}
-        />
-        <Counter
-          label="Mana"
-          color="text-accent-blue"
-          value={player.mana}
-          onMinus={() => game.adjustMana(playerIndex, -1)}
-          onPlus={() => game.adjustMana(playerIndex, +1)}
-        />
+        {/* HP bar */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => game.adjustHp(playerIndex, -1)}
+            className="w-7 h-7 flex items-center justify-center bg-accent-red/30 hover:bg-accent-red/50 text-accent-red rounded-full text-base font-bold"
+            title="HP -1"
+          >−</button>
+          <div className="relative w-44 h-7 bg-bg-card rounded-full overflow-hidden border border-accent-red/30">
+            <div
+              className="absolute inset-y-0 left-0 bg-gradient-to-r from-accent-red to-accent-red/70 transition-all"
+              style={{ width: `${hpPct}%` }}
+            />
+            <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-text-primary drop-shadow">
+              ❤ HP {player.hp} / {player.maxHp}
+            </div>
+          </div>
+          <button
+            onClick={() => game.adjustHp(playerIndex, +1)}
+            className="w-7 h-7 flex items-center justify-center bg-accent-red/30 hover:bg-accent-red/50 text-accent-red rounded-full text-base font-bold"
+            title="HP +1"
+          >+</button>
+        </div>
+
+        {/* Mana orb */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => game.adjustMana(playerIndex, -1)}
+            className="w-7 h-7 flex items-center justify-center bg-accent-blue/30 hover:bg-accent-blue/50 text-accent-blue rounded-full text-base font-bold"
+            title="Mana -1"
+          >−</button>
+          <div className="px-3 py-1 bg-accent-blue/20 border border-accent-blue/40 rounded-full text-sm font-mono text-accent-blue font-bold min-w-[80px] text-center">
+            ✦ {player.mana} 마나
+          </div>
+          <button
+            onClick={() => game.adjustMana(playerIndex, +1)}
+            className="w-7 h-7 flex items-center justify-center bg-accent-blue/30 hover:bg-accent-blue/50 text-accent-blue rounded-full text-base font-bold"
+            title="Mana +1"
+          >+</button>
+        </div>
 
         <span className="text-xs text-text-muted">
-          덱 {player.deck.length} ·
+          덱 <span className="text-text-primary font-mono">{player.deck.length}</span> ·
           <button onClick={onShowDiscard} className="ml-1 underline hover:text-text-primary">
-            버림 {player.discardPile.length}
+            버림 <span className="font-mono">{player.discardPile.length}</span>
           </button>
         </span>
       </div>
@@ -547,34 +572,42 @@ function Counter({
 
 // ============================================================
 function StatusChipsRow({
-  counters, onAdjust,
+  counters, onAdjust, compact = false,
 }: {
   counters: StatusCounters;
   onAdjust: (key: StatusKey, delta: number) => void;
+  compact?: boolean;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-1">
-      <span className="text-[10px] text-text-muted mr-1">상태:</span>
+    <div className="flex flex-wrap items-center gap-1.5">
+      <span className={`${compact ? 'text-[9px]' : 'text-[10px]'} text-text-muted mr-1 uppercase tracking-wider`}>
+        상태이상
+      </span>
       {STATUS_KEYS.map(key => {
         const value = counters[key] ?? 0;
+        const active = value > 0;
         return (
           <div
             key={key}
-            className={`flex items-center gap-0.5 rounded text-[10px] ${
-              value > 0
-                ? 'bg-accent-purple/15 text-accent-purple'
-                : 'bg-bg-card/50 text-text-muted'
+            className={`inline-flex items-center rounded border ${compact ? 'text-[10px]' : 'text-[11px]'} ${
+              active
+                ? 'bg-accent-purple/20 border-accent-purple/50 text-accent-purple'
+                : 'bg-bg-card/40 border-border/50 text-text-muted'
             }`}
           >
             <button
               onClick={() => onAdjust(key, -1)}
-              className="px-1 hover:bg-black/20 rounded-l"
+              className={`${compact ? 'px-1' : 'px-1.5'} py-0.5 hover:bg-black/30 rounded-l-[3px] disabled:opacity-40 disabled:cursor-not-allowed font-bold`}
               disabled={value === 0}
+              title={`${STATUS_LABELS[key]} -1`}
             >−</button>
-            <span className="px-1">{STATUS_LABELS[key]} {value}</span>
+            <span className={`${compact ? 'px-1' : 'px-1.5'} py-0.5 ${active ? 'font-semibold' : ''}`}>
+              {STATUS_LABELS[key]} {value}
+            </span>
             <button
               onClick={() => onAdjust(key, +1)}
-              className="px-1 hover:bg-black/20 rounded-r"
+              className={`${compact ? 'px-1' : 'px-1.5'} py-0.5 hover:bg-black/30 rounded-r-[3px] font-bold`}
+              title={`${STATUS_LABELS[key]} +1`}
             >+</button>
           </div>
         );
@@ -744,6 +777,7 @@ function MonsterCard({
         <StatusChipsRow
           counters={monster.statusCounters}
           onAdjust={(key, delta) => game.adjustMonsterStatus(slotIndex, key, delta)}
+          compact
         />
       </div>
 
