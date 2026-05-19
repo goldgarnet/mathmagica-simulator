@@ -99,6 +99,34 @@ export interface MagicLine {
   equalsCard?: CardInstance | null;
 }
 
+export type StatusKey =
+  | 'immunity'
+  | 'shield'
+  | 'vulnerable'
+  | 'weakened'
+  | 'curse'
+  | 'bleed'
+  | 'strengthen'
+  | 'extraAttack';
+
+export const STATUS_KEYS: StatusKey[] = [
+  'shield', 'immunity', 'vulnerable', 'weakened',
+  'curse', 'bleed', 'strengthen', 'extraAttack',
+];
+
+export const STATUS_LABELS: Record<StatusKey, string> = {
+  immunity: '면역',
+  shield: '보호막',
+  vulnerable: '취약',
+  weakened: '약화',
+  curse: '저주',
+  bleed: '출혈',
+  strengthen: '강화',
+  extraAttack: '추가공격',
+};
+
+export type StatusCounters = Partial<Record<StatusKey, number>>;
+
 export interface PlayerState {
   id: string;
   name: string;
@@ -117,25 +145,19 @@ export interface PlayerState {
     rightHand: EquipmentDef | null;
     accessories: EquipmentDef[];
   };
-  statusEffects: KeywordType[];
-  turnOrder: number;
-  hasActedThisRound: boolean;
-  hasBeenAttackedThisRound: boolean;
-  drawReduction: number;
+  statusCounters: StatusCounters;
   equipmentUsedThisScenario: string[];
 }
 
 export interface MonsterInstance {
   instanceId: string;
   defId: string;
-  currentKeywords: KeywordType[];
   currentPattern: MonsterPatternEntry | null;
   patternDeck: MonsterPatternEntry[];
   patternDiscard: MonsterPatternEntry[];
   destroyedSouls: number[];
   isDead: boolean;
-  shieldCount: number;
-  strengthenStacks: number;
+  statusCounters: StatusCounters;
   slotIndex: number;
 }
 
@@ -144,15 +166,7 @@ export interface MonsterSlot {
   activeMonster: MonsterInstance | null;
 }
 
-export type GamePhase =
-  | 'setup'
-  | 'roundStart'
-  | 'orderSelection'
-  | 'playerTurn'
-  | 'monsterAttack'
-  | 'roundEnd'
-  | 'victory'
-  | 'defeat';
+export type GamePhase = 'setup' | 'playing' | 'victory' | 'defeat';
 
 export interface GameLogEntry {
   timestamp: number;
