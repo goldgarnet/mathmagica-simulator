@@ -28,10 +28,10 @@
   --color-rarity-rare: #5cb8ff;
   --color-rarity-epic: #b07cff;
   --color-rarity-legendary: #ffb83d;
-  --font-display: 'Cinzel', 'Trajan Pro', serif;
-  --font-decorative: 'Cinzel Decorative', 'Cinzel', serif;
-  --font-sans: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-display: 'Cinzel', 'Noto Serif KR', 'Nanum Myeongjo', serif;
+  --font-decorative: 'Cinzel Decorative', 'Cinzel', 'Nanum Myeongjo', 'Gowun Batang', serif;
+  --font-sans: 'Cinzel', 'Gowun Batang', 'Noto Serif KR', 'Nanum Myeongjo', serif;
+  --font-mono: 'JetBrains Mono', 'Gowun Batang', ui-monospace, monospace;
 }
 
 * {
@@ -44,10 +44,15 @@ body {
     radial-gradient(ellipse at top, #1a1530 0%, var(--color-bg-primary) 50%),
     var(--color-bg-primary);
   color: var(--color-text-primary);
-  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-family: 'Cinzel', 'Gowun Batang', 'Noto Serif KR', 'Nanum Myeongjo', serif;
+  font-weight: 500;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+
+button, input, select, textarea {
+  font-family: inherit;
 }
 
 #root {
@@ -56,16 +61,19 @@ body {
 
 /* Utility classes for fancy typography */
 .font-display {
-  font-family: 'Cinzel', serif;
+  font-family: 'Cinzel', 'Noto Serif KR', 'Nanum Myeongjo', serif;
   letter-spacing: 0.03em;
 }
 .font-decorative {
-  font-family: 'Cinzel Decorative', 'Cinzel', serif;
+  font-family: 'Cinzel Decorative', 'Cinzel', 'Noto Serif KR', 'Nanum Myeongjo', serif;
   letter-spacing: 0.04em;
 }
 .font-mono-game {
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-family: 'JetBrains Mono', 'Gowun Batang', ui-monospace, monospace;
   font-feature-settings: 'tnum' 1;
+}
+.font-serif-kr {
+  font-family: 'Noto Serif KR', 'Gowun Batang', serif;
 }
 
 /* Card embellishment */

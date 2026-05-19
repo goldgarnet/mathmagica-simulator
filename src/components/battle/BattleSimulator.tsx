@@ -166,28 +166,31 @@ export default function BattleSimulator() {
 
         {/* Player area */}
         {activePlayer && (
-          <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="lg:flex-1 lg:min-h-0 flex flex-col lg:overflow-hidden">
             <PlayerBar player={activePlayer} playerIndex={apIdx} onShowDiscard={() => setShowDiscardPile(apIdx)} />
 
-            {/* Magic Lines */}
-            <div className="p-2 sm:p-3 space-y-2 flex-shrink-0 border-b border-border">
-              {activePlayer.magicLines.map((line, li) => (
-                <MagicLineRow
-                  key={li}
-                  player={activePlayer}
-                  playerIndex={apIdx}
-                  lineIndex={li}
-                  selectedHandCard={selectedHandCard}
-                  placeAsEquals={placeAsEquals}
-                  onPlaceCard={() => handlePlaceOnLine(li)}
-                  onCardHover={handleCardHover}
-                  onCardLeave={() => setHoveredCard(null)}
-                />
-              ))}
-            </div>
+            {/* Scrollable inner: magic lines + hand together scroll vertically */}
+            <div className="lg:flex-1 lg:min-h-0 lg:overflow-y-auto flex flex-col">
 
-            {/* Hand */}
-            <div className="lg:flex-1 lg:min-h-0 bg-bg-secondary/40 p-2 sm:p-3 lg:overflow-hidden flex flex-col">
+              {/* Magic Lines */}
+              <div className="p-2 sm:p-3 space-y-2 flex-shrink-0 border-b border-border">
+                {activePlayer.magicLines.map((line, li) => (
+                  <MagicLineRow
+                    key={li}
+                    player={activePlayer}
+                    playerIndex={apIdx}
+                    lineIndex={li}
+                    selectedHandCard={selectedHandCard}
+                    placeAsEquals={placeAsEquals}
+                    onPlaceCard={() => handlePlaceOnLine(li)}
+                    onCardHover={handleCardHover}
+                    onCardLeave={() => setHoveredCard(null)}
+                  />
+                ))}
+              </div>
+
+              {/* Hand */}
+              <div className="bg-bg-secondary/40 p-2 sm:p-3 flex flex-col flex-shrink-0">
               <div className="flex items-center gap-1.5 mb-2 flex-shrink-0 flex-wrap">
                 <span className="text-[10px] sm:text-xs text-text-muted uppercase tracking-wider font-display">
                   손패 ({activePlayer.hand.length}장)
@@ -252,7 +255,7 @@ export default function BattleSimulator() {
                   </>
                 )}
               </div>
-              <div className="lg:flex-1 flex gap-2 overflow-x-auto pb-2 min-h-[120px]">
+              <div className="flex gap-2 overflow-x-auto pb-2 min-h-[120px]">
                 {activePlayer.hand.length === 0 && (
                   <span className="text-xs text-text-muted self-center italic">
                     손패가 비어 있습니다. 카드 뽑기 버튼을 누르세요.
@@ -285,6 +288,7 @@ export default function BattleSimulator() {
                     </div>
                   );
                 })}
+              </div>
               </div>
             </div>
           </div>

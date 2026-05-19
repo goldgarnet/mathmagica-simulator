@@ -55,9 +55,9 @@ interface CardDisplayProps {
 
 // Card dimensions per size — keep aspect ratio so fonts scale together.
 const SIZE_DIMS = {
-  sm: { wrap: 'w-14 h-20', valueText: 'text-2xl', nameText: 'text-[8px]', starText: 'text-[10px]', symbolText: 'text-2xl', artifactName: 'text-[8px]' },
-  md: { wrap: 'w-20 h-28', valueText: 'text-4xl', nameText: 'text-[10px]', starText: 'text-xs', symbolText: 'text-4xl', artifactName: 'text-[11px]' },
-  lg: { wrap: 'w-28 h-40', valueText: 'text-5xl', nameText: 'text-xs', starText: 'text-sm', symbolText: 'text-5xl', artifactName: 'text-sm' },
+  sm: { wrap: 'w-14 h-20', valueText: 'text-2xl', nameText: 'text-[8px]', starText: 'text-[10px]', symbolText: 'text-2xl', artifactName: 'text-[8px]', artifactValue: 'text-xl', artifactSymbol: 'text-xl' },
+  md: { wrap: 'w-20 h-28', valueText: 'text-4xl', nameText: 'text-[10px]', starText: 'text-xs', symbolText: 'text-4xl', artifactName: 'text-[10px]', artifactValue: 'text-3xl', artifactSymbol: 'text-3xl' },
+  lg: { wrap: 'w-28 h-40', valueText: 'text-5xl', nameText: 'text-xs', starText: 'text-sm', symbolText: 'text-5xl', artifactName: 'text-xs', artifactValue: 'text-4xl', artifactSymbol: 'text-4xl' },
 };
 
 export function CardDisplay({ card, size = 'md', onClick, selected, draggable, onDragStart, className = '' }: CardDisplayProps) {
@@ -127,47 +127,54 @@ export function CardDisplay({ card, size = 'md', onClick, selected, draggable, o
   // -------- Artifact card --------
   const art = card;
   const rarity = RARITY_STYLES[art.rarity] || RARITY_STYLES.common;
-  // Artifact card features prominent name banner at top
+  // Flex column layout: name banner / value-symbol middle / power stars bottom.
+  // Each region has minimum room and the middle uses flex-1 to fill remaining.
   return (
     <div
-      className={`card-frame ${dims.wrap} relative border-2 ${rarity.border} ${rarity.glow} rounded-lg overflow-hidden ${baseInteract} ${selectionRing} ${className}`}
+      className={`card-frame ${dims.wrap} flex flex-col border-2 ${rarity.border} ${rarity.glow} rounded-lg overflow-hidden ${baseInteract} ${selectionRing} ${className}`}
       onClick={onClick}
       draggable={draggable}
       onDragStart={onDragStart}
       style={{ background: 'linear-gradient(to bottom, var(--color-bg-card), #1a1730)' }}
     >
-      {/* Name banner at top — larger than before */}
-      <div className="absolute top-0 left-0 right-0 px-0.5 py-1 bg-gradient-to-b from-black/60 to-transparent">
+      {/* Name banner at top — flex-shrink-0 so it never collapses */}
+      <div
+        className="px-0.5 py-0.5 bg-gradient-to-b from-black/60 to-transparent flex-shrink-0 flex items-center justify-center"
+        style={{ minHeight: size === 'sm' ? '24px' : size === 'md' ? '32px' : '42px' }}
+      >
         <div
-          className={`font-decorative font-bold ${dims.artifactName} text-center text-text-primary leading-tight px-0.5`}
+          className={`font-serif-kr font-bold ${dims.artifactName} text-center text-text-primary leading-[1.1] px-0.5`}
           style={{
-            // Allow up to 3 lines for longer names
             display: '-webkit-box',
-            WebkitLineClamp: 3,
+            WebkitLineClamp: size === 'sm' ? 2 : 3,
             WebkitBoxOrient: 'vertical',
             overflow: 'hidden',
+            wordBreak: 'keep-all',
           }}
         >
           {art.name}
         </div>
       </div>
 
-      {/* Middle: numeric value / symbol */}
-      <div className="absolute inset-0 flex flex-col items-center justify-center" style={{ paddingTop: size === 'sm' ? '32px' : size === 'md' ? '42px' : '56px' }}>
+      {/* Middle: numeric value / symbol — takes remaining flex space */}
+      <div className="flex-1 flex flex-col items-center justify-center min-h-0 px-1">
         {art.value !== undefined && (
-          <span className={`${dims.valueText} font-display font-bold text-text-primary text-shadow-glow leading-none`}>
+          <span className={`${dims.artifactValue} font-display font-bold text-text-primary text-shadow-glow leading-none`}>
             {art.value}
           </span>
         )}
         {art.symbol && (
-          <span className={`${dims.symbolText} font-display font-bold text-accent-purple text-shadow-glow leading-none`}>
+          <span className={`${dims.artifactSymbol} font-display font-bold text-accent-purple text-shadow-glow leading-none`}>
             {art.symbol === '*' ? '×' : art.symbol}
           </span>
         )}
+        {art.value === undefined && !art.symbol && (
+          <span className="text-accent-gold text-xl font-display">◈</span>
+        )}
       </div>
 
-      {/* Bottom: rarity + power stars */}
-      <div className="absolute bottom-0.5 left-0 right-0 flex flex-col items-center gap-0.5">
+      {/* Bottom: power stars — flex-shrink-0 so they're never cropped */}
+      <div className="flex justify-center pb-0.5 flex-shrink-0 min-h-[12px]">
         <PowerStars count={art.power} className={dims.starText} />
       </div>
     </div>
