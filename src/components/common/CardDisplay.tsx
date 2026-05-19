@@ -11,27 +11,33 @@ const ELEMENT_COLORS: Record<string, string> = {
   light: 'border-element-light text-element-light',
 };
 
-const ELEMENT_BG: Record<string, string> = {
-  life: 'bg-element-life/15',
-  fire: 'bg-element-fire/15',
-  air: 'bg-element-air/15',
-  water: 'bg-element-water/15',
-  earth: 'bg-element-earth/15',
-  lightning: 'bg-element-lightning/15',
-  void: 'bg-element-void/15',
-  light: 'bg-element-light/15',
+const ELEMENT_GRADIENTS: Record<string, string> = {
+  life: 'from-element-life/30 via-element-life/10 to-transparent',
+  fire: 'from-element-fire/40 via-element-fire/15 to-transparent',
+  air: 'from-element-air/30 via-element-air/10 to-transparent',
+  water: 'from-element-water/30 via-element-water/10 to-transparent',
+  earth: 'from-element-earth/30 via-element-earth/10 to-transparent',
+  lightning: 'from-element-lightning/40 via-element-lightning/15 to-transparent',
+  void: 'from-element-void/40 via-element-void/15 to-transparent',
+  light: 'from-element-light/30 via-element-light/10 to-transparent',
 };
 
-const RARITY_BORDER: Record<string, string> = {
-  common: 'border-rarity-common',
-  rare: 'border-rarity-rare',
-  epic: 'border-rarity-epic',
-  legendary: 'border-rarity-legendary',
+const ELEMENT_NAMES_KO: Record<string, string> = {
+  life: '생명', fire: '불', air: '공기', water: '물',
+  earth: '흙', lightning: '번개', void: '공허', light: '빛',
 };
 
-function PowerStars({ count }: { count: number }) {
+const RARITY_STYLES: Record<string, { border: string; glow: string; label: string }> = {
+  common:     { border: 'border-rarity-common',    glow: '',                label: 'COMMON' },
+  rare:       { border: 'border-rarity-rare',      glow: 'card-glow-blue',  label: 'RARE' },
+  epic:       { border: 'border-rarity-epic',      glow: 'card-glow-purple',label: 'EPIC' },
+  legendary:  { border: 'border-rarity-legendary', glow: 'card-glow-gold',  label: 'LEGENDARY' },
+};
+
+function PowerStars({ count, className = '' }: { count: number; className?: string }) {
+  if (count === 0) return null;
   return (
-    <span className="text-accent-gold text-xs">
+    <span className={`text-accent-gold tracking-tighter text-shadow-glow ${className}`}>
       {'★'.repeat(count)}
     </span>
   );
@@ -47,74 +53,123 @@ interface CardDisplayProps {
   className?: string;
 }
 
-export function CardDisplay({ card, size = 'md', onClick, selected, draggable, onDragStart, className = '' }: CardDisplayProps) {
-  const sizeClasses = {
-    sm: 'w-14 h-20 text-xs',
-    md: 'w-20 h-28 text-sm',
-    lg: 'w-28 h-40 text-base',
-  };
+// Card dimensions per size — keep aspect ratio so fonts scale together.
+const SIZE_DIMS = {
+  sm: { wrap: 'w-14 h-20', valueText: 'text-2xl', nameText: 'text-[8px]', starText: 'text-[10px]', symbolText: 'text-2xl', artifactName: 'text-[8px]' },
+  md: { wrap: 'w-20 h-28', valueText: 'text-4xl', nameText: 'text-[10px]', starText: 'text-xs', symbolText: 'text-4xl', artifactName: 'text-[11px]' },
+  lg: { wrap: 'w-28 h-40', valueText: 'text-5xl', nameText: 'text-xs', starText: 'text-sm', symbolText: 'text-5xl', artifactName: 'text-sm' },
+};
 
+export function CardDisplay({ card, size = 'md', onClick, selected, draggable, onDragStart, className = '' }: CardDisplayProps) {
+  const dims = SIZE_DIMS[size];
+  const baseInteract = `${onClick ? 'cursor-pointer' : ''} hover:brightness-125 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-150`;
+  const selectionRing = selected ? 'ring-2 ring-accent-gold scale-105 shadow-[0_0_20px_-2px_rgba(255,184,61,0.6)]' : '';
+
+  // -------- Element card --------
   if (card.cardType === 'element') {
     const colorClass = ELEMENT_COLORS[card.elementName] || '';
-    const bgClass = ELEMENT_BG[card.elementName] || '';
+    const gradientClass = ELEMENT_GRADIENTS[card.elementName] || '';
+    const elemName = ELEMENT_NAMES_KO[card.elementName] || card.elementName;
     return (
       <div
-        className={`${sizeClasses[size]} ${bgClass} border-2 ${colorClass} rounded-lg flex flex-col items-center justify-center cursor-pointer hover:brightness-125 transition-all ${
-          selected ? 'ring-2 ring-accent-gold scale-105' : ''
-        } ${className}`}
+        className={`card-frame ${dims.wrap} relative border-2 ${colorClass} rounded-lg overflow-hidden ${baseInteract} ${selectionRing} ${className}`}
         onClick={onClick}
         draggable={draggable}
         onDragStart={onDragStart}
+        style={{ background: 'linear-gradient(to bottom, var(--color-bg-card), var(--color-bg-secondary))' }}
       >
-        <span className="text-2xl font-bold">{card.value}</span>
-        <PowerStars count={card.power} />
-        <span className="text-[10px] mt-1 opacity-70">{card.name}</span>
+        <div className={`absolute inset-0 bg-gradient-to-br ${gradientClass}`} />
+        {/* Element tag at top */}
+        <div className="absolute top-0 left-0 right-0 flex justify-center pt-0.5">
+          <span className={`${dims.nameText} font-display uppercase tracking-widest ${colorClass.split(' ')[1]} opacity-80`}>
+            {elemName}
+          </span>
+        </div>
+        {/* Big numeric value */}
+        <div className="absolute inset-0 flex items-center justify-center pt-1">
+          <span className={`${dims.valueText} font-display font-bold ${colorClass.split(' ')[1]} text-shadow-glow leading-none`}>
+            {card.value}
+          </span>
+        </div>
+        {/* Power stars at bottom */}
+        <div className="absolute bottom-0.5 left-0 right-0 flex justify-center">
+          <PowerStars count={card.power} className={dims.starText} />
+        </div>
       </div>
     );
   }
 
+  // -------- Rune card --------
   if (card.cardType === 'rune') {
     return (
       <div
-        className={`${sizeClasses[size]} bg-accent-purple/15 border-2 border-accent-purple rounded-lg flex flex-col items-center justify-center cursor-pointer hover:brightness-125 transition-all ${
-          selected ? 'ring-2 ring-accent-gold scale-105' : ''
-        } ${className}`}
+        className={`card-frame ${dims.wrap} relative border-2 border-accent-purple rounded-lg overflow-hidden ${baseInteract} ${selectionRing} ${className}`}
         onClick={onClick}
         draggable={draggable}
         onDragStart={onDragStart}
+        style={{ background: 'linear-gradient(to bottom, var(--color-bg-card), var(--color-bg-secondary))' }}
       >
-        <span className="text-3xl font-bold text-accent-purple">
-          {card.symbol === '*' ? '×' : card.symbol}
-        </span>
-        <span className="text-[10px] mt-1 opacity-70">{card.name}</span>
+        <div className="absolute inset-0 bg-gradient-to-br from-accent-purple/30 via-accent-purple/10 to-transparent" />
+        <div className="absolute top-0 left-0 right-0 flex justify-center pt-0.5">
+          <span className={`${dims.nameText} font-display uppercase tracking-widest text-accent-purple opacity-80`}>
+            룬
+          </span>
+        </div>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className={`${dims.symbolText} font-display font-bold text-accent-purple text-shadow-glow leading-none`}>
+            {card.symbol === '*' ? '×' : card.symbol}
+          </span>
+        </div>
       </div>
     );
   }
 
-  // Artifact
+  // -------- Artifact card --------
   const art = card;
-  const rarityBorder = RARITY_BORDER[art.rarity] || '';
+  const rarity = RARITY_STYLES[art.rarity] || RARITY_STYLES.common;
+  // Artifact card features prominent name banner at top
   return (
     <div
-      className={`${sizeClasses[size]} bg-bg-card border-2 ${rarityBorder} rounded-lg flex flex-col items-center justify-center cursor-pointer hover:brightness-125 transition-all p-1 ${
-        selected ? 'ring-2 ring-accent-gold scale-105' : ''
-      } ${className}`}
+      className={`card-frame ${dims.wrap} relative border-2 ${rarity.border} ${rarity.glow} rounded-lg overflow-hidden ${baseInteract} ${selectionRing} ${className}`}
       onClick={onClick}
       draggable={draggable}
       onDragStart={onDragStart}
+      style={{ background: 'linear-gradient(to bottom, var(--color-bg-card), #1a1730)' }}
     >
-      {art.value !== undefined && (
-        <span className="text-lg font-bold text-text-primary">{art.value}</span>
-      )}
-      {art.symbol && (
-        <span className="text-lg font-bold text-accent-purple">
-          {art.symbol === '*' ? '×' : art.symbol}
-        </span>
-      )}
-      <PowerStars count={art.power} />
-      <span className="text-[9px] text-center leading-tight mt-1 text-text-secondary line-clamp-2">
-        {art.name}
-      </span>
+      {/* Name banner at top — larger than before */}
+      <div className="absolute top-0 left-0 right-0 px-0.5 py-1 bg-gradient-to-b from-black/60 to-transparent">
+        <div
+          className={`font-decorative font-bold ${dims.artifactName} text-center text-text-primary leading-tight px-0.5`}
+          style={{
+            // Allow up to 3 lines for longer names
+            display: '-webkit-box',
+            WebkitLineClamp: 3,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+          }}
+        >
+          {art.name}
+        </div>
+      </div>
+
+      {/* Middle: numeric value / symbol */}
+      <div className="absolute inset-0 flex flex-col items-center justify-center" style={{ paddingTop: size === 'sm' ? '32px' : size === 'md' ? '42px' : '56px' }}>
+        {art.value !== undefined && (
+          <span className={`${dims.valueText} font-display font-bold text-text-primary text-shadow-glow leading-none`}>
+            {art.value}
+          </span>
+        )}
+        {art.symbol && (
+          <span className={`${dims.symbolText} font-display font-bold text-accent-purple text-shadow-glow leading-none`}>
+            {art.symbol === '*' ? '×' : art.symbol}
+          </span>
+        )}
+      </div>
+
+      {/* Bottom: rarity + power stars */}
+      <div className="absolute bottom-0.5 left-0 right-0 flex flex-col items-center gap-0.5">
+        <PowerStars count={art.power} className={dims.starText} />
+      </div>
     </div>
   );
 }
@@ -127,7 +182,7 @@ interface EquipmentDisplayProps {
 }
 
 export function EquipmentDisplay({ equipment, size = 'md', onClick, selected }: EquipmentDisplayProps) {
-  const rarityBorder = RARITY_BORDER[equipment.rarity] || '';
+  const rarity = RARITY_STYLES[equipment.rarity] || RARITY_STYLES.common;
   const sizeClasses = size === 'sm' ? 'px-2 py-1 text-xs' : 'px-3 py-2 text-sm';
 
   const slotIcons: Record<string, string> = {
@@ -140,14 +195,14 @@ export function EquipmentDisplay({ equipment, size = 'md', onClick, selected }: 
 
   return (
     <div
-      className={`${sizeClasses} bg-bg-card border ${rarityBorder} rounded-lg cursor-pointer hover:brightness-125 transition-all flex items-center gap-2 ${
+      className={`${sizeClasses} bg-gradient-to-br from-bg-card to-bg-secondary border ${rarity.border} rounded-lg cursor-pointer hover:brightness-125 transition-all flex items-center gap-2 ${
         selected ? 'ring-2 ring-accent-gold' : ''
       }`}
       onClick={onClick}
     >
-      <span>{slotIcons[equipment.slot] || '⚙️'}</span>
+      <span className="text-base">{slotIcons[equipment.slot] || '⚙️'}</span>
       <div className="flex-1 min-w-0">
-        <div className="font-medium text-text-primary truncate">{equipment.name}</div>
+        <div className="font-decorative font-semibold text-text-primary truncate">{equipment.name}</div>
         <div className="text-[10px] text-text-muted truncate">{equipment.effectDescription}</div>
       </div>
     </div>
@@ -160,26 +215,71 @@ interface CardTooltipProps {
 
 export function CardTooltip({ card }: CardTooltipProps) {
   return (
-    <div className="bg-bg-secondary border border-border rounded-lg p-3 shadow-xl max-w-64 z-50">
-      <div className="font-bold text-text-primary mb-1">{card.name}</div>
+    <div className="bg-bg-secondary border-2 border-border rounded-lg p-3 shadow-2xl max-w-64 z-50 card-frame">
+      <div className="font-decorative font-bold text-base text-accent-gold mb-2 text-shadow-glow">
+        {card.name}
+      </div>
       <div className="text-xs text-text-secondary space-y-1">
         {card.cardType === 'element' && (
           <>
-            <div>원소: {card.elementName} | 값: {card.value}</div>
-            <div>파워: <PowerStars count={card.power} /></div>
+            <div>
+              <span className="text-text-muted">원소</span>{' '}
+              <span className="text-text-primary font-medium">
+                {ELEMENT_NAMES_KO[card.elementName] || card.elementName}
+              </span>
+            </div>
+            <div>
+              <span className="text-text-muted">값</span>{' '}
+              <span className="font-display text-lg text-text-primary">{card.value}</span>
+            </div>
+            <div>
+              <span className="text-text-muted">파워</span>{' '}
+              <PowerStars count={card.power} />
+            </div>
           </>
         )}
         {card.cardType === 'rune' && (
-          <div>연산기호: {card.symbol === '*' ? '×' : card.symbol}</div>
+          <div>
+            <span className="text-text-muted">연산</span>{' '}
+            <span className="font-display text-xl text-accent-purple">
+              {card.symbol === '*' ? '×' : card.symbol}
+            </span>
+          </div>
         )}
         {card.cardType === 'artifact' && (
           <>
-            {card.value !== undefined && <div>값: {card.value}</div>}
-            {card.symbol && <div>기호: {card.symbol === '*' ? '×' : card.symbol}</div>}
-            <div>파워: <PowerStars count={card.power} /></div>
-            <div>등급: {card.rarity}</div>
-            <div className="mt-1 text-text-primary">{card.effectDescription}</div>
-            {card.versatile && <div className="text-accent-green">다용도</div>}
+            {card.value !== undefined && (
+              <div>
+                <span className="text-text-muted">값</span>{' '}
+                <span className="font-display text-lg">{card.value}</span>
+              </div>
+            )}
+            {card.symbol && (
+              <div>
+                <span className="text-text-muted">기호</span>{' '}
+                <span className="font-display text-xl text-accent-purple">
+                  {card.symbol === '*' ? '×' : card.symbol}
+                </span>
+              </div>
+            )}
+            <div>
+              <span className="text-text-muted">파워</span>{' '}
+              <PowerStars count={card.power} />
+            </div>
+            <div className="text-[10px] uppercase tracking-widest font-display font-bold mt-1">
+              <span className={
+                card.rarity === 'legendary' ? 'text-rarity-legendary' :
+                card.rarity === 'epic' ? 'text-rarity-epic' :
+                card.rarity === 'rare' ? 'text-rarity-rare' :
+                'text-rarity-common'
+              }>
+                ◆ {RARITY_STYLES[card.rarity]?.label ?? card.rarity}
+              </span>
+            </div>
+            <div className="mt-2 pt-2 border-t border-border text-text-primary leading-relaxed">
+              {card.effectDescription}
+            </div>
+            {card.versatile && <div className="text-accent-green text-[10px]">⟡ 다용도</div>}
           </>
         )}
       </div>

@@ -1,33 +1,37 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg-primary: #0f0e17;
-  --color-bg-secondary: #1a1929;
-  --color-bg-tertiary: #232136;
-  --color-bg-card: #2a2844;
-  --color-bg-hover: #352f5a;
+  --color-bg-primary: #0a0913;
+  --color-bg-secondary: #14121f;
+  --color-bg-tertiary: #1d1a2e;
+  --color-bg-card: #25223c;
+  --color-bg-hover: #322d52;
   --color-border: #3d3766;
   --color-border-light: #4a4280;
-  --color-text-primary: #e8e4f0;
+  --color-text-primary: #f0ecf7;
   --color-text-secondary: #a89ec8;
   --color-text-muted: #7b6f9e;
-  --color-accent-purple: #9b5de5;
-  --color-accent-blue: #4ea8de;
-  --color-accent-gold: #f5a623;
-  --color-accent-red: #e74c5e;
+  --color-accent-purple: #b07cff;
+  --color-accent-blue: #5cb8ff;
+  --color-accent-gold: #ffb83d;
+  --color-accent-red: #ff5a6e;
   --color-accent-green: #4ecdc4;
   --color-element-life: #4ecdc4;
-  --color-element-fire: #e74c5e;
-  --color-element-air: #a89ec8;
-  --color-element-water: #4ea8de;
-  --color-element-earth: #c4a35a;
-  --color-element-lightning: #f5a623;
-  --color-element-void: #7b6f9e;
-  --color-element-light: #f0e6ff;
+  --color-element-fire: #ff5a6e;
+  --color-element-air: #cabae0;
+  --color-element-water: #5cb8ff;
+  --color-element-earth: #d4b56a;
+  --color-element-lightning: #ffb83d;
+  --color-element-void: #8d7fb5;
+  --color-element-light: #fff3b8;
   --color-rarity-common: #a89ec8;
-  --color-rarity-rare: #4ea8de;
-  --color-rarity-epic: #9b5de5;
-  --color-rarity-legendary: #f5a623;
+  --color-rarity-rare: #5cb8ff;
+  --color-rarity-epic: #b07cff;
+  --color-rarity-legendary: #ffb83d;
+  --font-display: 'Cinzel', 'Trajan Pro', serif;
+  --font-decorative: 'Cinzel Decorative', 'Cinzel', serif;
+  --font-sans: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 }
 
 * {
@@ -36,18 +40,93 @@
 
 body {
   margin: 0;
-  background: var(--color-bg-primary);
+  background:
+    radial-gradient(ellipse at top, #1a1530 0%, var(--color-bg-primary) 50%),
+    var(--color-bg-primary);
   color: var(--color-text-primary);
-  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
   min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 #root {
   min-height: 100vh;
 }
 
+/* Utility classes for fancy typography */
+.font-display {
+  font-family: 'Cinzel', serif;
+  letter-spacing: 0.03em;
+}
+.font-decorative {
+  font-family: 'Cinzel Decorative', 'Cinzel', serif;
+  letter-spacing: 0.04em;
+}
+.font-mono-game {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-feature-settings: 'tnum' 1;
+}
+
+/* Card embellishment */
+.card-frame {
+  position: relative;
+  isolation: isolate;
+}
+.card-frame::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.08) 0%, transparent 60%),
+    radial-gradient(circle at bottom, rgba(0, 0, 0, 0.25) 0%, transparent 60%);
+  z-index: 0;
+}
+.card-frame > * {
+  position: relative;
+  z-index: 1;
+}
+.card-glow-gold {
+  box-shadow:
+    0 0 0 1px rgba(255, 184, 61, 0.4),
+    0 4px 16px -4px rgba(255, 184, 61, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+.card-glow-purple {
+  box-shadow:
+    0 0 0 1px rgba(176, 124, 255, 0.4),
+    0 4px 16px -4px rgba(176, 124, 255, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+.card-glow-blue {
+  box-shadow:
+    0 0 0 1px rgba(92, 184, 255, 0.4),
+    0 4px 16px -4px rgba(92, 184, 255, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.text-shadow-glow {
+  text-shadow:
+    0 0 6px currentColor,
+    0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.divider-fancy {
+  background: linear-gradient(
+    to right,
+    transparent,
+    currentColor 20%,
+    currentColor 80%,
+    transparent
+  );
+  opacity: 0.4;
+}
+
 ::-webkit-scrollbar {
   width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
   background: var(--color-bg-secondary);
